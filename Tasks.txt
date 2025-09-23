@@ -1,0 +1,210 @@
+1. Display City based on States and Country:
+==============================================
+
+Country.ts:
+------------
+// Define the structure for City
+export interface City {
+  name: string;
+}
+
+// Define the structure for State, which contains cities
+export interface State {
+  name: string;
+  cities: City[];
+}
+
+// Define the structure for Country, which contains states
+export interface Country {
+  name: string;
+  states: State[];
+}
+
+// Static data for countries, states, and cities
+export const CountryInfo: Country[] = [
+  {
+    name: "India",
+    states: [
+      {
+        name: "Andhra Pradesh",
+        cities: [{ name: "Kadapa" }, { name: "Badvel" }],
+      },
+      {
+        name: "Telangana",
+        cities: [{ name: "Hyderabad" }, { name: "Warangal" }],
+      },
+    ],
+  },
+
+  {
+    name: "USA",
+    states: [
+      {
+        name: "California",
+        cities: [{ name: "Los Angeles" }, { name: "San Francisco" }],
+      },
+      { name: "Texas", cities: [{ name: "Houston" }, { name: "Dallas" }] },
+    ],
+  },
+];
+
+
+
+Country.tsx:
+-------------
+import { useState, type ChangeEvent } from "react";
+import { CountryInfo } from "./Country";
+
+function DisplayCountry() {
+  const [selectedCountry, setSelectedCountry] = useState("");
+  const [selectedState, setSelectedState] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
+
+  const countryObj = CountryInfo.find(
+    (country) => country.name === selectedCountry
+  );
+  const states = countryObj ? countryObj.states : [];
+  const stateObj = states.find((s) => s.name === selectedState);
+  const cities = stateObj ? stateObj.cities : [];
+
+  const handleCountryChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    setSelectedCountry(event.target.value);
+    setSelectedState("");
+    setSelectedCity("");
+  };
+
+  const handleStateChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    setSelectedState(event.target.value);
+    setSelectedCity("");
+  };
+
+  const handleCityChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    setSelectedCity(event.target.value);
+  };
+
+  return (
+    <div>
+      <h1>Display Country, State and City</h1>
+      <div className="country-info">
+        <select value={selectedCountry} onChange={handleCountryChange}>
+          <option>Select Country</option>
+          {CountryInfo.map((c) => (
+            <option key={c.name}>{c.name}</option>
+          ))}
+        </select>
+
+        {selectedCountry && (
+          <select value={selectedState} onChange={handleStateChange}>
+            <option>Select State</option>
+            {states.map((state) => (
+              <option key={state.name}>{state.name}</option>
+            ))}
+          </select>
+        )}
+
+        {selectedState && (
+          <select value={selectedCity} onChange={handleCityChange}>
+            <option>Select City</option>
+            {cities.map((city) => (
+              <option key={city.name}>{city.name}</option>
+            ))}
+          </select>
+        )}
+      </div>
+      <h3>
+        Selected: {selectedCountry} {selectedState} {selectedCity}
+      </h3>
+    </div>
+  );
+}
+
+export default DisplayCountry;
+
+* We could use filter() instead of find() method. 
+filter() --> It will return an array of all matches.
+find() --> It will return first matching element/object. 
+
+* In our case, when a user selects a country, we only need that 
+one country object to get its states.
+
+If we use filter we should write like this --> results[0] 
+
+
+Country.test.tsx:
+------------------
+import DisplayCountry from "./DisplayCountry";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { CountryInfo } from "./Country";
+
+describe("Display Country", () => {
+  test("TC01: Rendering component", () => {
+    render(<DisplayCountry />);
+    const title = screen.getByTestId("title");
+    const countryDropdown = screen.getByTestId("select-country");
+    expect(title).toBeInTheDocument();
+    expect(countryDropdown).toBeInTheDocument();
+  });
+
+  test("TC02: Intially State and City dropdowns hidden", () => {
+    render(<DisplayCountry />);
+    expect(screen.queryByTestId("select-state")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("select-city")).not.toBeInTheDocument();
+  });
+
+  test("TC03: Renders all options for country drodpown", () => {
+    render(<DisplayCountry />);
+    CountryInfo.forEach((country) => {
+      expect(
+        screen.getByTestId(`country-option-${country.name}`)
+      ).toBeInTheDocument();
+    });
+  });
+
+  test("TC04: Display State drodpown when country option click", () => {
+    render(<DisplayCountry />);
+    const countryDropdown = screen.getByTestId("select-country");
+    fireEvent.change(countryDropdown, { target: { value: "India" } });
+    expect(screen.getByTestId("select-state")).toBeInTheDocument();
+  });
+
+  test("TC05: Selecting a state shows city dropdown", () => {
+    render(<DisplayCountry />);
+    const countryDropdown = screen.getByTestId("select-country");
+    fireEvent.change(countryDropdown, { target: { value: "India" } });
+    const stateDropdown = screen.getByTestId("select-state");
+    fireEvent.change(stateDropdown, { target: { value: "Andhra Pradesh" } });
+    expect(screen.getByTestId("select-city")).toBeInTheDocument();
+  });
+
+  test("TC06: Shows Selected options", () => {
+    render(<DisplayCountry />);
+    const countryDropdown = screen.getByTestId("select-country");
+    fireEvent.change(countryDropdown, { target: { value: "India" } });
+    const stateDropdown = screen.getByTestId("select-state");
+    expect(stateDropdown).toBeInTheDocument();
+
+    fireEvent.change(stateDropdown, { target: { value: "Andhra Pradesh" } });
+    const cityDropdown = screen.getByTestId("select-city");
+    expect(cityDropdown).toBeInTheDocument();
+
+    fireEvent.change(cityDropdown, { target: { value: "Kadapa" } });
+    expect(screen.getByTestId("selected-values")).toHaveTextContent(
+      "Selected: India Andhra Pradesh Kadapa"
+    );
+  });
+});
+
+* getByTestId throws an error if the element is not found 
+in the DOM.
+
+* When the component first renders, the state dropdown does not exist, 
+so getByTestId throws an error if we try to find the element with
+getByTestId. 
+
+* queryByTestId returns null if the element is not found 
+(it does NOT throw an error).
+
+* use getBy... When the element exist. 
+* use queryBy... when the element might not exist.
+
+*********************************************************************************
