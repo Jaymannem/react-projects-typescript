@@ -1,9 +1,9 @@
-import DisplayCountry from "./Tasks/CountryStateCity/DisplayCountry";
+import DataTable from "./Tasks/FetchData/DataTable";
 
 function App() {
   return (
     <>
-      <DisplayCountry />
+      <DataTable />
     </>
   );
 }
